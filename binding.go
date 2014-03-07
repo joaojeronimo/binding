@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"github.com/codegangsta/martini"
 	"io"
+	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -104,6 +106,7 @@ func MultipartForm(formStruct interface{}, ifacePtr ...interface{}) martini.Hand
 		}
 
 		mapForm(formStruct, req.MultipartForm.Value, errors)
+		mapFormFiles(formStruct, req.MultipartForm.File, errors)
 
 		validateAndMap(formStruct, context, errors, ifacePtr...)
 	}
@@ -206,6 +209,48 @@ func mapForm(formStruct reflect.Value, form map[string][]string, errors *Errors)
 				formStruct.Elem().Field(i).Set(slice)
 			} else {
 				setWithProperType(typeField.Type.Kind(), inputValue[0], structField, inputFieldName, errors)
+			}
+		}
+	}
+}
+
+func mapFormFiles(formStruct reflect.Value, form map[string][]*multipart.FileHeader, errors *Errors) {
+	typ := formStruct.Elem().Type()
+
+	for i := 0; i < typ.NumField(); i++ {
+		typeField := typ.Field(i)
+		if inputFieldName := typeField.Tag.Get("form"); inputFieldName != "" {
+			structField := formStruct.Elem().Field(i)
+			if !structField.CanSet() {
+				continue
+			}
+
+			inputValue, exists := form[inputFieldName]
+
+			if !exists {
+				continue
+			}
+			numElems := len(inputValue)
+
+			if numElems > 0 {
+				for i := 0; i < numElems; i++ {
+					header := inputValue[i].Header
+
+					if header.Get("Content-Type") == "application/octet-stream" {
+						file, err := inputValue[i].Open()
+						if err != nil {
+							panic(err)
+						}
+
+						content, err := ioutil.ReadAll(file)
+						if err != nil {
+							panic(err)
+						}
+
+						structField.SetString(string(content))
+						formStruct.Elem().Field(i).Set(structField)
+					}
+				}
 			}
 		}
 	}
