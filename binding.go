@@ -234,22 +234,18 @@ func mapFormFiles(formStruct reflect.Value, form map[string][]*multipart.FileHea
 
 			if numElems > 0 {
 				for i := 0; i < numElems; i++ {
-					header := inputValue[i].Header
-
-					if header.Get("Content-Type") == "application/octet-stream" {
-						file, err := inputValue[i].Open()
-						if err != nil {
-							panic(err)
-						}
-
-						content, err := ioutil.ReadAll(file)
-						if err != nil {
-							panic(err)
-						}
-
-						structField.SetString(string(content))
-						formStruct.Elem().Field(i).Set(structField)
+					file, err := inputValue[i].Open()
+					if err != nil {
+						panic(err)
 					}
+
+					content, err := ioutil.ReadAll(file)
+					if err != nil {
+						panic(err)
+					}
+
+					structField.SetString(string(content))
+					formStruct.Elem().Field(i).Set(structField)
 				}
 			}
 		}
