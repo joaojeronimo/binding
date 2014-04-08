@@ -4,7 +4,7 @@ package binding
 
 import (
 	"encoding/json"
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
